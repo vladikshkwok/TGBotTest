@@ -8,13 +8,15 @@ button_help = 'Помощь'
 
 def button_help_handler(update: Update, context: CallbackContext):
     update.message.reply_text(
-        text='Ты думал я кнопки обрабатываю? Наивный',
+        text='Добрый день, вас приветствует бот. Для управления ботом требуется использовать клавиатуру',
         reply_markup=ReplyKeyboardRemove(),
     )
 
 
 def message_handler(update: Update, context: CallbackContext):
     text = update.message.text
+    # user =
+    # print(f'User: {user} requested: {text}')
     if text == button_help:
         return button_help_handler(update=update, context=context)
     reply_markup = ReplyKeyboardMarkup(
