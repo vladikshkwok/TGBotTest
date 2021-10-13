@@ -3,32 +3,18 @@ from telegram.ext import Updater, CallbackContext, Filters, MessageHandler
 from telegram.utils.request import Request
 from settings import TG_TOKEN
 
-
-def log_errors(f):
-    def inner(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        except Exception as e:
-            print(f'Error: {e}')
-            raise e
-
-    return inner
-
-
 button_help = 'Помощь'
 
 
 def button_help_handler(update: Update, context: CallbackContext):
     update.message.reply_text(
-        text='Добрый день, вас приветствует бот. Для управления ботом требуется использовать клавиатуру',
+        text='Ты думал я кнопки обрабатываю? Наивный',
         reply_markup=ReplyKeyboardRemove(),
     )
 
 
 def message_handler(update: Update, context: CallbackContext):
     text = update.message.text
-    user = update.message.from_user
-    print(f'User: {user} requested: {text}')
     if text == button_help:
         return button_help_handler(update=update, context=context)
     reply_markup = ReplyKeyboardMarkup(
@@ -51,6 +37,18 @@ def message_handler(update: Update, context: CallbackContext):
         reply_markup=reply_markup,
     )
 
+
+def log_errors(f):
+    def inner(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            print(f'Error: {e}')
+            raise e
+
+    return inner
+
+
 @log_errors
 def main():
     print('Program is started')
@@ -70,6 +68,7 @@ def main():
 
     print(f'Info about bot: {updater.bot.get_me()}')
     updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
+
     updater.start_polling()
     updater.idle()
 
