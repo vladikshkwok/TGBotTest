@@ -52,7 +52,6 @@ def log_errors(f):
 @log_errors
 def main():
     print('Program is started')
-
     req = Request(
         connect_timeout=9,
         con_pool_size=8
