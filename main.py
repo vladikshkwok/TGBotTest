@@ -5,6 +5,7 @@ from telegram import Update, ReplyKeyboardRemove, Bot, ReplyKeyboardMarkup, Keyb
 from telegram.ext import Updater, CallbackContext, Filters, MessageHandler
 from telegram.utils.request import Request
 
+
 from mysql_func import new_user, find_user
 from settings import TG_TOKEN
 
@@ -30,15 +31,16 @@ def button_help_handler(update: Update, context: CallbackContext):
     )
 
 
+
 def button_register_handler(update: Update, context: CallbackContext):
     username = update.message.from_user.username
     first_name = update.message.from_user.first_name
     last_name = update.message.from_user.last_name
     phone = update.message.contact.phone_number
     if first_name is None:
-        first_name = "Pass"
+        first_name = ""
     if last_name is None:
-        last_name = "Pass"
+        last_name = ""
     user_id = update.message.from_user.id
     new_user(user_full_name=first_name + ' ' + last_name, tg_username=username, tg_user_id=user_id)
     update.message.reply_text(
@@ -50,7 +52,7 @@ def message_handler(update: Update, context: CallbackContext):
     text = update.message.text
     contact = update.message.contact
     tg_user_id = update.message.from_user.id
-    print(f'User with tg_id: {tg_user_id} requested: {text}')
+    print(f'User with username: {update.message.from_user.username} and chatid: {update.message.chat_id} requested: {text}')
     if text == button_help:
         return button_help_handler(update=update, context=context)
     if text == 'test':
