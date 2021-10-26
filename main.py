@@ -1,10 +1,12 @@
 import datetime
+import re
 
 import telegram.utils.request
-from telegram import Update, ReplyKeyboardRemove, Bot, ReplyKeyboardMarkup, KeyboardButton
-from telegram.ext import Updater, CallbackContext, Filters, MessageHandler
-from telegram.utils.request import Request
-
+from aiogram import Bot, types
+from aiogram.dispatcher import Dispatcher
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.utils import executor
+from states import RegisterStates
 
 from mysql_func import new_user, find_user
 from settings import TG_TOKEN
@@ -23,47 +25,52 @@ def log_errors(f):
 
 button_help = 'Помощь'
 button_register = 'Зарегистрироваться'
+button_register_back = 'Назад'
+button_register_cancel = 'Отменить'
 
+bot = Bot(token=TG_TOKEN, )
+dp = Dispatcher(bot)
 
-def button_help_handler(update: Update, context: CallbackContext):
-    update.message.reply_text(
+@dp.message_handler(commands=['help', button_help])
+async def button_help_handler(message: types.Message):
+    await message.se(
         text='Добрый день, вас приветствует бот. Для управления ботом требуется использовать клавиатуру',
     )
 
 
-
-def button_register_handler(update: Update, context: CallbackContext):
-    username = update.message.from_user.username
-    first_name = update.message.from_user.first_name
-    last_name = update.message.from_user.last_name
-    phone = update.message.contact.phone_number
+@dp.message_handler(commands=['start'])
+async def start_user_handler(message: types.Message):
+    username = message.from_user.username
+    first_name = message.from_user.first_name
+    last_name = message.from_user.last_name
+    tg_user_id = message.from_user.id
+    tg_chat_id = message.chat.id
     if first_name is None:
         first_name = ""
     if last_name is None:
         last_name = ""
-    user_id = update.message.from_user.id
-    new_user(user_full_name=first_name + ' ' + last_name, tg_username=username, tg_user_id=user_id)
-    update.message.reply_text(
-        text=f'Добрый день, вы занесены в базу данных, с именем пользователя: {username} и телефоном {phone}',
-    )
+
+    new_user(user_full_name=first_name + ' ' + last_name,
+             tg_username=username,
+             tg_user_id=tg_user_id,
+             tg_chat_id=tg_chat_id)
 
 
-def message_handler(update: Update, context: CallbackContext):
-    text = update.message.text
-    contact = update.message.contact
-    tg_user_id = update.message.from_user.id
-    print(f'User with username: {update.message.from_user.username} and chatid: {update.message.chat_id} requested: {text}')
-    if text == button_help:
-        return button_help_handler(update=update, context=context)
+@dp.message_handler()
+async def message_handler(message: types.Message):
+    text = message.text
+    contact = message.contact
+    tg_user_id = message.from_user.id
+    print(f'User with username: {message.from_user.username} and chatid: {message.chat.id} requested: {text}')
     if text == 'test':
-        update.message.reply_text(
+        await message.reply(
             text='Hello, this was test',
         )
         return
     reply_markup = ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text=button_register, request_contact=True, ),
+                KeyboardButton(text=button_register, ),
             ],
             [
                 KeyboardButton(text=button_help),
@@ -74,38 +81,124 @@ def message_handler(update: Update, context: CallbackContext):
         ],
         resize_keyboard=True,
     )
-    if contact is not None:
-        reply_markup.keyboard.remove([KeyboardButton(text=button_register, request_contact=True, )])
-        update.message.reply_text(text='Регистрация', reply_markup=reply_markup, )
-        return button_register_handler(update=update, context=context)
-    if find_user(tg_user_id=tg_user_id):
-        reply_markup.keyboard.remove([KeyboardButton(text=button_register, request_contact=True, )])
-    update.message.reply_text(
+    await bot.send_message(
+        chat_id=message.chat.id,
         text='Hello, press button below',
-        reply_markup=reply_markup,
-    )
+        reply_markup=reply_markup,)
+
+
+
+# def register_handler(update: Update, context: CallbackContext):
+#     reply_markup = ReplyKeyboardMarkup(
+#         keyboard=[
+#             [
+#                 KeyboardButton(text=button_register_back),
+#                 KeyboardButton(text=button_register_cancel)
+#             ],
+#         ],
+#         resize_keyboard=True,
+#     )
+#     if update.message.text == button_register:
+#         update.message.reply_text(text="Напишите свои фамилию имя и отчество", reply_markup=reply_markup)
+#         return FULLNAME
+
+
+
+# def set_full_name(update: Update, context: CallbackContext):
+#     text = update.message.text
+#     while not re.fullmatch(r'[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+(?:\s+[А-ЯЁ][а-яё]+)?', text):
+#         update.message.reply_text(text="Напишите свои ФИО по русски")
+#         return FULLNAME
+#     print(f"User fullname: {text}")
+#     update.message.reply_text(text="Напишите свою дату рождения")
+#     return DATEBIRTH
+#
+#
+# def set_birth_date(update: Update, context: CallbackContext):
+#     text = update.message.text
+#     print(f"User datebirth: {text}")
+#     update.message.reply_text(text="Напишите свое место проживания")
+#     return PLACEOFRESIDENCE
+#
+#
+# def set_res_place(update: Update, context: CallbackContext):
+#     text = update.message.text
+#     print(f"User place of residence: {text}")
+#     update.message.reply_text(text="Напишите свой номер телефона")
+#     return PHONENUM
+#
+#
+# def set_phone_num(update: Update, context: CallbackContext):
+#     text = update.message.text
+#     print(f"User phone number: {text}")
+#     update.message.reply_text(text="Напишите свою серию паспорта")
+#     return PASSSERIES
+#
+#
+# def set_pass_series(update: Update, context: CallbackContext):
+#     text = update.message.text
+#     print(f"User passport series: {text}")
+#     update.message.reply_text(text="Напишите свой номер паспорта")
+#     return PASSNUM
+#
+#
+# def set_pass_number(update: Update, context: CallbackContext):
+#     text = update.message.text
+#     print(f"User passport number: {text}")
+#     update.message.reply_text(text="Напишите свою дату выдачи паспорта")
+#     return PASSDATEOFISSUE
+#
+#
+# def set_pass_date_of_issue(update: Update, context: CallbackContext):
+#     text = update.message.text
+#     print(f"User passport date of issue: {text}")
+#     update.message.reply_text(text="Напишите кем выдан ваш паспорт")
+#     return PASSISSUEDBY
+#
+#
+# def set_pass_issued_by(update: Update, context: CallbackContext):
+#     text = update.message.text
+#     print(f"User passport issued by: {text}")
+#     update.message.reply_text(text="Напишите свой адрес регистрации из паспорта")
+#     return REGISTRADDR
+#
+#
+# def set_reg_address(update: Update, context: CallbackContext):
+#     text = update.message.text
+#     print(f"User register address: {text}")
+#     update.message.reply_text(text="Напишите свою email")
+#     return EMAIL
+#
+#
+# def set_email(update: Update, context: CallbackContext):
+#     text = update.message.text
+#     print(f"User email: {text}")
+#     update.message.reply_text(text="Напишите свою специальность")
+#     return MAJOR
+#
+#
+# def set_major(update: Update, context: CallbackContext):
+#     text = update.message.text
+#     print(f"User major: {text}")
+#     update.message.reply_text(text="Спасибо, Вы успешно зарегистрированы")
+#     return ConversationHandler.END
+#
+#
+# def cancel(update: Update, context: CallbackContext):
+#     if update.message.text == button_register_cancel:
+#         user = update.message.from_user
+#         print(f"User {user.first_name} canceled the conversation.")
+#
+#         return ConversationHandler.END
 
 
 @log_errors
 def main():
+    print(RegisterStates.all())
     print('Program is started')
-    req = Request(
-        connect_timeout=9,
-        con_pool_size=8
-    )
-    bot = Bot(
-        request=req,
-        token=TG_TOKEN,
-    )
-    updater = Updater(
-        bot=bot,
-        use_context=True,
-    )
-    print(f'Info about bot: {updater.bot.get_me()}')
-    updater.dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=message_handler))
-    updater.start_polling()
-    updater.idle()
 
+    print(f'Info about bot: {bot.get_webhook_info()}')
+    executor.start_polling(dp)
     print('Finish')
 
 
